@@ -662,10 +662,12 @@ export default class App extends React.Component {
     );
 
     transactionWitnessSet.set_vkeys(txVkeyWitnesses.vkeys());
-
+    return;
     const signedTx = Transaction.new(tx.body(), transactionWitnessSet);
 
-    const submittedTxHash = await this.API.submitTx(signedTx);
+    const submittedTxHash = await this.API.submitTx(
+      "84a40081825820bb217abaca60fc0ca68c1555eca6a96d2478547818ae76ce6836133f3cc546e00101828258390079467c69a9ac66280174d09d62575ba955748b21dec3b483a9469a65cc339a35f9e0fe039cf510c761d4dd29040c48e9657fdac7e9c01d941a0010f44782583900584b294b2d94b90d834f67105fdedd92a9541e31075c37e6fc16a33b7d9d26f1578bff6ebcca12b4c1492712b37b831ad3c852d742c2be16821aeff40ad5a2581c1ec85dcee27f2d90ec1f9a1e4ce74a667dc9be8b184463223f9c9601a14350584c05581c659f2917fb63f12b33667463ee575eeac1845bbc736b9c0bbc40ba82a14454534c410a021a00028d05031a02415d10a10080f5f6"
+    );
     console.log(submittedTxHash);
     this.setState({ submittedTxHash });
   };
