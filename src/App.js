@@ -163,7 +163,7 @@ export default class App extends React.Component {
         wallets.push(key);
       }
     }
-    if (wallets.length === 0 && count < 3) {
+    if (wallets.length === 0 && count < 5) {
       setTimeout(() => {
         this.pollWallets(count + 1);
       }, 1000);
