@@ -86,6 +86,8 @@ export default class App extends React.Component {
       usedAddress: undefined,
 
       txBody: undefined,
+      signedTx: undefined,
+      witnessKeys: undefined,
       txBodyCborHex_unsigned: "",
       txBodyCborHex_signed: "",
       submittedTxHash: "",
@@ -604,6 +606,50 @@ export default class App extends React.Component {
     return txOutputs;
   };
 
+  signAdaTransaction = async () => {
+    console.log("sending ada");
+    const txBuilder = await this.initTransactionBuilder();
+    const shelleyOutputAddress = Address.from_bech32(
+      this.state.addressBech32SendADA
+    );
+    const shelleyChangeAddress = Address.from_bech32(this.state.changeAddress);
+
+    txBuilder.add_output(
+      TransactionOutput.new(
+        shelleyOutputAddress,
+        Value.new(BigNum.from_str(this.state.lovelaceToSend.toString()))
+      )
+    );
+    console.log("added output");
+    // Find the available UTXOs in the wallet and
+    // us them as Inputs
+    const txUnspentOutputs = await this.getTxUnspentOutputs();
+    console.log("txUnspentOutputs", txUnspentOutputs);
+    txBuilder.add_inputs_from(txUnspentOutputs, 1);
+
+    // calculate the min fee required and send any change to an address
+    txBuilder.add_change_if_needed(shelleyChangeAddress);
+
+    // once the transaction is ready, we build it to get the tx body without witnesses
+    const txBody = txBuilder.build();
+
+    // Tx witness
+    const transactionWitnessSet = TransactionWitnessSet.new();
+
+    const tx = Transaction.new(
+      txBody,
+      TransactionWitnessSet.from_bytes(transactionWitnessSet.to_bytes())
+    );
+    console.log("attempting to sign");
+    const GOOD_TX =
+      "a40081825820bb217abaca60fc0ca68c1555eca6a96d2478547818ae76ce6836133f3cc546e00101828258390079467c69a9ac66280174d09d62575ba955748b21dec3b483a9469a65cc339a35f9e0fe039cf510c761d4dd29040c48e9657fdac7e9c01d941a0010f4478258390013a3c057874131771d8e9f12549b0d34b1498cd168c1413851bcfc9820ce26ccf82b957ed1422570ce77333e73caeadc3e7f102a638710ee821aeff40ad5a2581c1ec85dcee27f2d90ec1f9a1e4ce74a667dc9be8b184463223f9c9601a14350584c05581c659f2917fb63f12b33667463ee575eeac1845bbc736b9c0bbc40ba82a14454534c410a021a00028d05031a02415d10";
+    let txVkeyWitnesses = await this.API.signTx(GOOD_TX, true);
+
+    console.log("witness set", txVkeyWitnesses);
+
+    this.setState({ witnessKeys: txVkeyWitnesses });
+  };
+
   /**
    * The transaction is build in 3 stages:
    * 1 - initialize the Transaction Builder
@@ -650,10 +696,11 @@ export default class App extends React.Component {
       TransactionWitnessSet.from_bytes(transactionWitnessSet.to_bytes())
     );
     console.log("attempting to sign");
-    let txVkeyWitnesses = await this.API.signTx(
-      "a40081825820bb217abaca60fc0ca68c1555eca6a96d2478547818ae76ce6836133f3cc546e00101828258390079467c69a9ac66280174d09d62575ba955748b21dec3b483a9469a65cc339a35f9e0fe039cf510c761d4dd29040c48e9657fdac7e9c01d941a0010f4478258390013a3c057874131771d8e9f12549b0d34b1498cd168c1413851bcfc9820ce26ccf82b957ed1422570ce77333e73caeadc3e7f102a638710ee821aeff40ad5a2581c1ec85dcee27f2d90ec1f9a1e4ce74a667dc9be8b184463223f9c9601a14350584c05581c659f2917fb63f12b33667463ee575eeac1845bbc736b9c0bbc40ba82a14454534c410a021a00028d05031a02415d10",
-      true
-    );
+    const GOOD_TX =
+      "a40081825820bb217abaca60fc0ca68c1555eca6a96d2478547818ae76ce6836133f3cc546e00101828258390079467c69a9ac66280174d09d62575ba955748b21dec3b483a9469a65cc339a35f9e0fe039cf510c761d4dd29040c48e9657fdac7e9c01d941a0010f4478258390013a3c057874131771d8e9f12549b0d34b1498cd168c1413851bcfc9820ce26ccf82b957ed1422570ce77333e73caeadc3e7f102a638710ee821aeff40ad5a2581c1ec85dcee27f2d90ec1f9a1e4ce74a667dc9be8b184463223f9c9601a14350584c05581c659f2917fb63f12b33667463ee575eeac1845bbc736b9c0bbc40ba82a14454534c410a021a00028d05031a02415d10";
+    const BAD_TX =
+      "v40081825820bb217abaca60fc0ca68c1555eca6a96d2478547818ae76ce6836133f3cc546e00101828258390079467c69a9ac66280174d09d62575ba955748b21dec3b483a9469a65cc339a35f9e0fe039cf510c761d4dd29040c48e9657fdac7e9c01d941a0010f4478258390013a3c057874131771d8e9f12549b0d34b1498cd168c1413851bcfc9820ce26ccf82b957ed1422570ce77333e73caeadc3e7f102a638710ee821aeff40ad5a2581c1ec85dcee27f2d90ec1f9a1e4ce74a667dc9be8b184463223f9c9601a14350584c05581c659f2917fb63f12b33667463ee575eeac1845bbc736b9c0bbc40ba82a14454534c410a021a00028d05031a02415d10";
+    let txVkeyWitnesses = await this.API.signTx(GOOD_TX, true);
 
     console.log("witness set", txVkeyWitnesses);
 
@@ -662,7 +709,6 @@ export default class App extends React.Component {
     );
 
     transactionWitnessSet.set_vkeys(txVkeyWitnesses.vkeys());
-    return;
     const signedTx = Transaction.new(tx.body(), transactionWitnessSet);
 
     const submittedTxHash = await this.API.submitTx(
@@ -1289,6 +1335,20 @@ export default class App extends React.Component {
           selectedTabId={this.state.selectedTabId}
         >
           <Tab
+            id="signTx"
+            title="#99. SignTx"
+            panel={
+              <div style={{ marginLeft: "20px" }}>
+                <button
+                  style={{ padding: "10px" }}
+                  onClick={this.signAdaTransaction}
+                >
+                  Run
+                </button>
+              </div>
+            }
+          />
+          <Tab
             id="1"
             title="1. Send ADA to Address"
             panel={
@@ -1872,7 +1932,8 @@ export default class App extends React.Component {
         </Tabs>
 
         <hr style={{ marginTop: "40px", marginBottom: "40px" }} />
-
+        <p>Signed Tx: {this.state.signedTx && this.state.signedTx}</p>
+        <p>Witness keys: {this.state.witnessKeys && this.state.witnessKeys}}</p>
         <p>{`Unsigned txBodyCborHex: ${this.state.txBodyCborHex_unsigned}`}</p>
         <p>{`Signed txBodyCborHex: ${this.state.txBodyCborHex_signed}`}</p>
         <p>{`Submitted Tx Hash: ${this.state.submittedTxHash}`}</p>
