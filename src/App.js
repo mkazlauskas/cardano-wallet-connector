@@ -321,6 +321,7 @@ export default class App extends React.Component {
   getNetworkId = async () => {
     try {
       const networkId = await this.API.getNetworkId();
+      console.log({ networkId });
       this.setState({ networkId });
     } catch (err) {
       console.log(err);
@@ -401,6 +402,7 @@ export default class App extends React.Component {
         // console.log(`utxo: ${str}`)
       }
       this.setState({ Utxos });
+      console.log({ Utxos });
     } catch (err) {
       console.log(err);
     }
@@ -604,6 +606,15 @@ export default class App extends React.Component {
       txOutputs.add(utxo.TransactionUnspentOutput);
     }
     return txOutputs;
+  };
+
+  signData = async () => {
+    // format (address, hexstring of data)
+    await this.API.signData(
+      "addr_test1qqr585tvlc7ylnqvz8pyqwauzrdu0mxag3m7q56grgmgu7sxu2hyfhlkwuxupa9d5085eunq2qywy7hvmvej456flknswgndm3",
+      "7b22676c6f7373617279223a7b227469746c65223a226578616d706c6520676c6f7373617279222c22476c6f7373446976223a7b227469746c65223a2253222c22476c6f73734c697374223a7b22476c6f7373456e747279223a7b224944223a2253474d4c222c22536f72744173223a2253474d4c222c22476c6f73735465726d223a225374616e646172642047656e6572616c697a6564204d61726b7570204c616e6775616765222c224163726f6e796d223a2253474d4c222c22416262726576223a2249534f20383837393a31393836222c22476c6f7373446566223a7b2270617261223a2241206d6574612d6d61726b7570206c616e67756167652c207573656420746f20637265617465206d61726b7570206c616e677561676573207375636820617320446f63426f6f6b2e222c22476c6f7373536565416c736f223a5b22474d4c222c22584d4c225d7d2c22476c6f7373536565223a226d61726b7570227d7d7d7d7d"
+    );
+    this.setState({ dataSigned: true });
   };
 
   signAdaTransaction = async (useLargeTx) => {
@@ -1332,6 +1343,20 @@ export default class App extends React.Component {
               </div>
             }
           />
+          <Tab
+            id="signData"
+            title="SignData"
+            panel={
+              <div style={{ marginLeft: "20px" }}>
+                <button
+                  style={{ padding: "10px" }}
+                  onClick={() => this.signData()}
+                >
+                  Run
+                </button>
+              </div>
+            }
+          />
           {/*<Tab
             id="1"
             title="1. Send ADA to Address"
@@ -1916,7 +1941,7 @@ export default class App extends React.Component {
 
         <hr style={{ marginTop: "40px", marginBottom: "40px" }} />
         <p>Signed Tx: {this.state.signedTx && this.state.signedTx}</p>
-        <p>Witness keys: {this.state.witnessKeys && this.state.witnessKeys}}</p>
+        <p>Witness keys: {this.state.witnessKeys && this.state.witnessKeys}</p>
         <p>{`Unsigned txBodyCborHex: ${this.state.txBodyCborHex_unsigned}`}</p>
         <p>{`Signed txBodyCborHex: ${this.state.txBodyCborHex_signed}`}</p>
         <p>{`Submitted Tx Hash: ${this.state.submittedTxHash}`}</p>
