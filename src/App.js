@@ -57,9 +57,9 @@ import {
   Ed25519KeyHash,
   NativeScript,
   StakeCredential,
+  Vkeywitnesses,
 } from "@emurgo/cardano-serialization-lib-asmjs";
 import "./App.css";
-import { blake2b } from "blakejs";
 let Buffer = require("buffer/").Buffer;
 let blake = require("blakejs");
 
@@ -68,7 +68,7 @@ export default class App extends React.Component {
     super(props);
 
     this.state = {
-      selectedTabId: "signTxSmall",
+      selectedTabId: "1",
       whichWalletSelected: undefined,
       walletFound: false,
       walletIsEnabled: false,
@@ -86,15 +86,12 @@ export default class App extends React.Component {
       usedAddress: undefined,
 
       txBody: undefined,
-      signedData: undefined,
-      signedTx: undefined,
-      witnessKeys: undefined,
       txBodyCborHex_unsigned: "",
       txBodyCborHex_signed: "",
       submittedTxHash: "",
-
+      transactionWitnessSet: undefined,
       addressBech32SendADA:
-        "addr_test1qryjlz9rky88v5wyl62eug9ej2nfj26vjxu2jgyw065lsvy2g35n7qpskj9uk9vjyhcc07gle89z8w39uuhk38ans8zsy7hdhj",
+        "addr_test1qq6f92330t26g8827qlslaa6z668vrrrv9xht5p28lk8mx9eqwhlk7um88k2my9nqglxz4rkfej7neap2e7c7lle5cjsyzg9y3",
       lovelaceToSend: 3000000,
       assetNameHex: "4c494645",
       assetPolicyIdHex:
@@ -142,7 +139,7 @@ export default class App extends React.Component {
       maxTxSize: 16384,
       priceMem: 0.0577,
       priceStep: 0.0000721,
-      coinsPerUtxoWord: "34482",
+      coinsPerUtxoByte: "4310",
     };
 
     this.pollWallets = this.pollWallets.bind(this);
@@ -172,9 +169,15 @@ export default class App extends React.Component {
       }, 1000);
       return;
     }
-    this.setState({ wallets }, () => {
-      this.refreshData();
-    });
+    this.setState(
+      {
+        wallets,
+        whichWalletSelected: wallets[0],
+      },
+      () => {
+        this.refreshData();
+      }
+    );
   };
 
   /**
@@ -316,7 +319,6 @@ export default class App extends React.Component {
   getNetworkId = async () => {
     try {
       const networkId = await this.API.getNetworkId();
-      console.log({ networkId });
       this.setState({ networkId });
     } catch (err) {
       console.log(err);
@@ -397,7 +399,6 @@ export default class App extends React.Component {
         // console.log(`utxo: ${str}`)
       }
       this.setState({ Utxos });
-      console.log({ Utxos });
     } catch (err) {
       console.log(err);
     }
@@ -423,7 +424,6 @@ export default class App extends React.Component {
         collateral = await this.API.experimental.getCollateral();
       } else {
         collateral = await this.API.getCollateral();
-        console.log("collateral is", collateral);
       }
 
       for (const x of collateral) {
@@ -446,7 +446,6 @@ export default class App extends React.Component {
   getBalance = async () => {
     try {
       const balanceCBORHex = await this.API.getBalance();
-      console.log("balanceCBORHex", balanceCBORHex);
 
       const balance = Value.from_bytes(Buffer.from(balanceCBORHex, "hex"))
         .coin()
@@ -465,8 +464,10 @@ export default class App extends React.Component {
   getChangeAddress = async () => {
     try {
       const raw = await this.API.getChangeAddress();
-      const changeAddress = raw; // Address.from_bytes(Buffer.from(raw, "hex")).to_bech32()
-      this.setState({ changeAddress });
+      /*const changeAddress = Address.from_bytes(
+        Buffer.from(raw, "hex")
+      ).to_bech32();*/
+      this.setState({ changeAddress: raw });
     } catch (err) {
       console.log(err);
     }
@@ -480,8 +481,12 @@ export default class App extends React.Component {
     try {
       const raw = await this.API.getRewardAddresses();
       const rawFirst = raw[0];
-      const rewardAddress = rawFirst; // Address.from_bytes(Buffer.from(rawFirst, "hex")).to_bech32()
-      this.setState({ rewardAddress });
+      console.log("ra", rawFirst);
+      /*const rewardAddress = Address.from_bytes(
+        Buffer.from(rawFirst, "hex")
+      ).to_bech32();*/
+      // console.log(rewardAddress)
+      this.setState({ rewardAddress: rawFirst });
     } catch (err) {
       console.log(err);
     }
@@ -494,11 +499,10 @@ export default class App extends React.Component {
   getUsedAddresses = async () => {
     try {
       const raw = await this.API.getUsedAddresses();
-      console.log(raw);
       const rawFirst = raw[0];
-      const usedAddress = rawFirst;
-      console.log(usedAddress);
-      this.setState({ usedAddress });
+      // const usedAddress = new Address(rawFirst).from_bech32();
+      // console.log(rewardAddress)
+      this.setState({ usedAddress: rawFirst });
     } catch (err) {
       console.log(err);
     }
@@ -520,11 +524,11 @@ export default class App extends React.Component {
         if (walletEnabled) {
           await this.getNetworkId();
           await this.getUtxos();
+          // await this.getCollateral();
           await this.getBalance();
           await this.getChangeAddress();
           await this.getRewardAddresses();
           await this.getUsedAddresses();
-          // await this.getCollateral();
         } else {
           await this.setState({
             Utxos: null,
@@ -579,8 +583,8 @@ export default class App extends React.Component {
         )
         .pool_deposit(BigNum.from_str(this.protocolParams.poolDeposit))
         .key_deposit(BigNum.from_str(this.protocolParams.keyDeposit))
-        .coins_per_utxo_word(
-          BigNum.from_str(this.protocolParams.coinsPerUtxoWord)
+        .coins_per_utxo_byte(
+          BigNum.from_str(this.protocolParams.coinsPerUtxoByte)
         )
         .max_value_size(this.protocolParams.maxValSize)
         .max_tx_size(this.protocolParams.maxTxSize)
@@ -603,37 +607,6 @@ export default class App extends React.Component {
     return txOutputs;
   };
 
-  signData = async (dataString) => {
-    // format (address, hexstring of data)
-    const signed = await this.API.signData(
-      "addr_test1qqr585tvlc7ylnqvz8pyqwauzrdu0mxag3m7q56grgmgu7sxu2hyfhlkwuxupa9d5085eunq2qywy7hvmvej456flknswgndm3",
-      dataString
-    );
-
-    this.setState({
-      signedData: {
-        key: signed.key,
-        witness: signed.witness,
-      },
-    });
-  };
-
-  signAdaTransaction = async (useLargeTx) => {
-    console.log("attempting to sign");
-    const SMALL_TX =
-      "a40081825820bb217abaca60fc0ca68c1555eca6a96d2478547818ae76ce6836133f3cc546e00101828258390079467c69a9ac66280174d09d62575ba955748b21dec3b483a9469a65cc339a35f9e0fe039cf510c761d4dd29040c48e9657fdac7e9c01d941a0010f4478258390013a3c057874131771d8e9f12549b0d34b1498cd168c1413851bcfc9820ce26ccf82b957ed1422570ce77333e73caeadc3e7f102a638710ee821aeff40ad5a2581c1ec85dcee27f2d90ec1f9a1e4ce74a667dc9be8b184463223f9c9601a14350584c05581c659f2917fb63f12b33667463ee575eeac1845bbc736b9c0bbc40ba82a14454534c410a021a00028d05031a02415d10";
-
-    const LARGE_TX =
-      "a40081825820bb217abaca60fc0ca68c1555eca6a96d2478547818ae76ce6836133f3cc546e00101828258390079467c69a9ac66280174d09d62575ba955748b21dec3b483a9469a65cc339a35f9e0fe039cf510c761d4dd29040c48e9657fdac7e9c01d941b00000102b36211c7825839009b5b0ec1ef94e4cc887801b90f88e85781ec1322b20bef641315e5929965dddc6ceadc387118c60c979c2d60393d094b98a26644d87b7353821b37e2de39280769d4a2581c1ec85dcee27f2d90ec1f9a1e4ce74a667dc9be8b184463223f9c9601a14350584c05581c659f2917fb63f12b33667463ee575eeac1845bbc736b9c0bbc40ba82a14454534c410a021a00028e65031a02415d10";
-    let txVkeyWitnesses = await this.API.signTx(
-      useLargeTx ? LARGE_TX : SMALL_TX,
-      true
-    );
-
-    console.log("witness set", txVkeyWitnesses);
-    this.setState({ witnessKeys: txVkeyWitnesses });
-  };
-
   /**
    * The transaction is build in 3 stages:
    * 1 - initialize the Transaction Builder
@@ -646,32 +619,34 @@ export default class App extends React.Component {
    * @returns {Promise<void>}
    */
   buildSendADATransaction = async () => {
-    console.log("sending ada");
     const txBuilder = await this.initTransactionBuilder();
-    const shelleyOutputAddress = Address.from_bech32(
-      this.state.addressBech32SendADA
-    );
-    const shelleyChangeAddress = Address.from_bech32(this.state.changeAddress);
+    const shelleyOutputAddress = this.state.addressBech32SendADA;
+    const shelleyChangeAddress = this.state.changeAddress;
+
+    console.log("shelleyOutputAddress", shelleyOutputAddress);
+    console.log("shelleyChangeAddress", shelleyChangeAddress);
 
     txBuilder.add_output(
       TransactionOutput.new(
-        shelleyOutputAddress,
+        Address.from_bech32(shelleyOutputAddress),
         Value.new(BigNum.from_str(this.state.lovelaceToSend.toString()))
       )
     );
     console.log("added output");
+
     // Find the available UTXOs in the wallet and
     // us them as Inputs
     const txUnspentOutputs = await this.getTxUnspentOutputs();
-    console.log("txUnspentOutputs", txUnspentOutputs);
     txBuilder.add_inputs_from(txUnspentOutputs, 1);
+    console.log("added inputs");
 
     // calculate the min fee required and send any change to an address
-    txBuilder.add_change_if_needed(shelleyChangeAddress);
+    txBuilder.add_change_if_needed(Address.from_bech32(shelleyChangeAddress));
+    console.log("added change");
 
     // once the transaction is ready, we build it to get the tx body without witnesses
     const txBody = txBuilder.build();
-
+    console.log("built tx");
     // Tx witness
     const transactionWitnessSet = TransactionWitnessSet.new();
 
@@ -679,36 +654,37 @@ export default class App extends React.Component {
       txBody,
       TransactionWitnessSet.from_bytes(transactionWitnessSet.to_bytes())
     );
-    console.log("attempting to sign");
-    const GOOD_TX =
-      "a40081825820bb217abaca60fc0ca68c1555eca6a96d2478547818ae76ce6836133f3cc546e00101828258390079467c69a9ac66280174d09d62575ba955748b21dec3b483a9469a65cc339a35f9e0fe039cf510c761d4dd29040c48e9657fdac7e9c01d941a0010f4478258390013a3c057874131771d8e9f12549b0d34b1498cd168c1413851bcfc9820ce26ccf82b957ed1422570ce77333e73caeadc3e7f102a638710ee821aeff40ad5a2581c1ec85dcee27f2d90ec1f9a1e4ce74a667dc9be8b184463223f9c9601a14350584c05581c659f2917fb63f12b33667463ee575eeac1845bbc736b9c0bbc40ba82a14454534c410a021a00028d05031a02415d10";
-    let txVkeyWitnesses = await this.API.signTx(GOOD_TX, true);
 
-    console.log("witness set", txVkeyWitnesses);
+    let txVkeyWitnesses = await this.API.signTx(
+      Buffer.from(tx.to_bytes(), "utf8").toString("hex"),
+      true
+    );
+
+    console.log(txVkeyWitnesses);
 
     txVkeyWitnesses = TransactionWitnessSet.from_bytes(
       Buffer.from(txVkeyWitnesses, "hex")
     );
 
     transactionWitnessSet.set_vkeys(txVkeyWitnesses.vkeys());
+
     const signedTx = Transaction.new(tx.body(), transactionWitnessSet);
 
-    const submittedTxHash = await this.API.submitTx(
-      "84a40081825820bb217abaca60fc0ca68c1555eca6a96d2478547818ae76ce6836133f3cc546e00101828258390079467c69a9ac66280174d09d62575ba955748b21dec3b483a9469a65cc339a35f9e0fe039cf510c761d4dd29040c48e9657fdac7e9c01d941a0010f44782583900584b294b2d94b90d834f67105fdedd92a9541e31075c37e6fc16a33b7d9d26f1578bff6ebcca12b4c1492712b37b831ad3c852d742c2be16821aeff40ad5a2581c1ec85dcee27f2d90ec1f9a1e4ce74a667dc9be8b184463223f9c9601a14350584c05581c659f2917fb63f12b33667463ee575eeac1845bbc736b9c0bbc40ba82a14454534c410a021a00028d05031a02415d10a10080f5f6"
-    );
-    console.log(submittedTxHash, signedTx);
+    const txCbor = Buffer.from(signedTx.to_bytes(), "utf8").toString("hex");
+    const submittedTxHash = await this.API.submitTx(txCbor);
+    console.log(submittedTxHash);
     this.setState({ submittedTxHash });
   };
 
   buildSendTokenTransaction = async () => {
     const txBuilder = await this.initTransactionBuilder();
-    const shelleyOutputAddress = Address.from_bech32(
-      this.state.addressBech32SendADA
-    );
-    const shelleyChangeAddress = Address.from_bech32(this.state.changeAddress);
+    const shelleyOutputAddress = this.state.addressBech32SendADA;
+    const shelleyChangeAddress = this.state.changeAddress;
 
     let txOutputBuilder = TransactionOutputBuilder.new();
-    txOutputBuilder = txOutputBuilder.with_address(shelleyOutputAddress);
+    txOutputBuilder = txOutputBuilder.with_address(
+      new Address(shelleyOutputAddress).to_bech32()
+    );
     txOutputBuilder = txOutputBuilder.next();
 
     let multiAsset = MultiAsset.new();
@@ -769,9 +745,6 @@ export default class App extends React.Component {
     );
     console.log(submittedTxHash);
     this.setState({ submittedTxHash });
-
-    // const txBodyCborHex_unsigned = Buffer.from(txBody.to_bytes(), "utf8").toString("hex");
-    // this.setState({txBodyCborHex_unsigned, txBody})
   };
 
   buildSendAdaToPlutusScript = async () => {
@@ -1070,7 +1043,7 @@ export default class App extends React.Component {
   buildRedeemTokenFromPlutusScript = async () => {
     const txBuilder = await this.initTransactionBuilder();
     const ScriptAddress = Address.from_bech32(this.state.addressScriptBech32);
-    const shelleyChangeAddress = Address(this.state.changeAddress);
+    const shelleyChangeAddress = Address.from_bech32(this.state.changeAddress);
 
     let multiAsset = MultiAsset.new();
     let assets = Assets.new();
@@ -1317,70 +1290,6 @@ export default class App extends React.Component {
           selectedTabId={this.state.selectedTabId}
         >
           <Tab
-            id="signTxSmall"
-            title="SignTx (small amount)"
-            panel={
-              <div style={{ marginLeft: "20px" }}>
-                <button
-                  style={{ padding: "10px" }}
-                  disabled={!this.state.walletIsEnabled}
-                  onClick={() => this.signAdaTransaction(false)}
-                >
-                  Run
-                </button>
-              </div>
-            }
-          />
-          <Tab
-            id="signTxLarge"
-            title="SignTx (huge amount)"
-            panel={
-              <div style={{ marginLeft: "20px" }}>
-                <button
-                  style={{ padding: "10px" }}
-                  disabled={!this.state.walletIsEnabled}
-                  onClick={() => this.signAdaTransaction(true)}
-                >
-                  Run
-                </button>
-              </div>
-            }
-          />
-          <Tab
-            id="signDataJson"
-            title="SignData (JSON)"
-            panel={
-              <div style={{ marginLeft: "20px" }}>
-                <button
-                  style={{ padding: "10px" }}
-                  disabled={!this.state.walletIsEnabled}
-                  onClick={() =>
-                    this.signData(
-                      "7b22676c6f7373617279223a7b227469746c65223a226578616d706c6520676c6f7373617279222c22476c6f7373446976223a7b227469746c65223a2253222c22476c6f73734c697374223a7b22476c6f7373456e747279223a7b224944223a2253474d4c222c22536f72744173223a2253474d4c222c22476c6f73735465726d223a225374616e646172642047656e6572616c697a6564204d61726b7570204c616e6775616765222c224163726f6e796d223a2253474d4c222c22416262726576223a2249534f20383837393a31393836222c22476c6f7373446566223a7b2270617261223a2241206d6574612d6d61726b7570206c616e67756167652c207573656420746f20637265617465206d61726b7570206c616e677561676573207375636820617320446f63426f6f6b2e222c22476c6f7373536565416c736f223a5b22474d4c222c22584d4c225d7d2c22476c6f7373536565223a226d61726b7570227d7d7d7d7d"
-                    )
-                  }
-                >
-                  Run
-                </button>
-              </div>
-            }
-          />
-          <Tab
-            id="signDataString"
-            title="SignData (string)"
-            panel={
-              <div style={{ marginLeft: "20px" }}>
-                <button
-                  style={{ padding: "10px" }}
-                  disabled={!this.state.walletIsEnabled}
-                  onClick={() => this.signData("abc123")}
-                >
-                  Run
-                </button>
-              </div>
-            }
-          />
-          {/*<Tab
             id="1"
             title="1. Send ADA to Address"
             panel={
@@ -1787,9 +1696,10 @@ export default class App extends React.Component {
                 >
                   Run
                 </button>
-
+                {/*<button style={{padding: "10px"}} onClick={this.signTransaction}>2. Sign Transaction</button>*/}
+                {/*<button style={{padding: "10px"}} onClick={this.submitTransaction}>3. Submit Transaction</button>*/}
               </div>
-            }}
+            }
           />
           <Tab
             id="6"
@@ -1958,26 +1868,15 @@ export default class App extends React.Component {
                 </button>
               </div>
             }
-          />*/}
+          />
           <Tabs.Expander />
         </Tabs>
 
         <hr style={{ marginTop: "40px", marginBottom: "40px" }} />
-        {this.state.signedData && (
-          <div>
-            Signed Data:{" "}
-            <p>
-              <strong>key</strong> {this.state.signedData.key}
-            </p>
-            <p>
-              <strong>witness</strong> {this.state.signedData.witness}
-            </p>
-          </div>
-        )}
-        <p>Signed Tx: {this.state.signedTx && this.state.signedTx}</p>
-        <p>Witness keys: {this.state.witnessKeys && this.state.witnessKeys}</p>
-        <p>{`Unsigned txBodyCborHex: ${this.state.txBodyCborHex_unsigned}`}</p>
-        <p>{`Signed txBodyCborHex: ${this.state.txBodyCborHex_signed}`}</p>
+
+        {/*<p>{`Unsigned txBodyCborHex: ${this.state.txBodyCborHex_unsigned}`}</p>*/}
+        {/*<p>{`Signed txBodyCborHex: ${this.state.txBodyCborHex_signed}`}</p>*/}
+        <p>{`TX witness key set ${this.state.transactionWitnessSet}`}</p>
         <p>{`Submitted Tx Hash: ${this.state.submittedTxHash}`}</p>
         <p>{this.state.submittedTxHash ? "check your wallet !" : ""}</p>
       </div>
