@@ -93,9 +93,8 @@ export default class App extends React.Component {
       addressBech32SendADA:
         "addr_test1qq6f92330t26g8827qlslaa6z668vrrrv9xht5p28lk8mx9eqwhlk7um88k2my9nqglxz4rkfej7neap2e7c7lle5cjsyzg9y3",
       lovelaceToSend: 3000000,
-      assetNameHex: "4c494645",
-      assetPolicyIdHex:
-        "ae02017105527c6c0c9840397a39cc5ca39fabe5b9998ba70fda5f2f",
+      assetNameHex: undefined,
+      assetPolicyIdHex: undefined,
       assetAmountToSend: 5,
       addressScriptBech32:
         "addr_test1wpnlxv2xv9a9ucvnvzqakwepzl9ltx7jzgm53av2e9ncv4sysemm8",
@@ -377,10 +376,14 @@ export default class App extends React.Component {
                 assetName.name(),
                 "utf8"
               ).toString();
+
               const assetNameHex = Buffer.from(
                 assetName.name(),
                 "utf8"
               ).toString("hex");
+              if (!this.state.assetPolicyIdHex && policyId && assetNameHex) {
+                this.setState({ assetPolicyIdHex: policyIdHex, assetNameHex });
+              }
               const multiassetAmt = multiasset.get_asset(policyId, assetName);
               multiAssetStr += `+ ${multiassetAmt.to_str()} + ${policyIdHex}.${assetNameHex} (${assetNameString})`;
               // console.log(assetNameString)
@@ -398,8 +401,10 @@ export default class App extends React.Component {
           TransactionUnspentOutput: utxo,
         };
         Utxos.push(obj);
+
         // console.log(`utxo: ${str}`)
       }
+      console.log("UTXOS", Utxos);
       this.setState({ Utxos });
     } catch (err) {
       console.log(err);
@@ -678,12 +683,12 @@ export default class App extends React.Component {
 
     const signedTx = Transaction.new(tx.body(), signedWitnessSet);
 
-    //this.setState({ transactionWitnessSet: signedTx.to_json() });
+    this.setState({ transactionWitnessSet: signedTx.witness_set.toString() });
 
-    const txCbor = Buffer.from(signedTx.to_bytes()).toString("hex");
+    /*const txCbor = Buffer.from(signedTx.to_bytes()).toString("hex");
     const submittedTxHash = await this.API.submitTx(txCbor);
     console.log(submittedTxHash);
-    this.setState({ submittedTxHash });
+    this.setState({ submittedTxHash });*/
   };
 
   buildSendTokenTransaction = async () => {
@@ -693,7 +698,7 @@ export default class App extends React.Component {
 
     let txOutputBuilder = TransactionOutputBuilder.new();
     txOutputBuilder = txOutputBuilder.with_address(
-      new Address(shelleyOutputAddress).to_bech32()
+      Address.from_bech32(shelleyOutputAddress)
     );
     txOutputBuilder = txOutputBuilder.next();
 
@@ -712,6 +717,8 @@ export default class App extends React.Component {
       multiAsset,
       BigNum.from_str(this.protocolParams.coinsPerUtxoWord)
     );
+
+    console.log("good so far");
     const txOutput = txOutputBuilder.build();
 
     txBuilder.add_output(txOutput);
@@ -719,7 +726,7 @@ export default class App extends React.Component {
     // Find the available UTXOs in the wallet and
     // us them as Inputs
     const txUnspentOutputs = await this.getTxUnspentOutputs();
-    txBuilder.add_inputs_from(txUnspentOutputs, 1);
+    txBuilder.add_inputs_from(txUnspentOutputs, 3);
 
     // set the time to live - the absolute slot value before the tx becomes invalid
     // txBuilder.set_ttl(51821456);
@@ -739,7 +746,7 @@ export default class App extends React.Component {
     );
 
     let txVkeyWitnesses = await this.API.signTx(
-      Buffer.from(tx.to_bytes(), "utf8").toString("hex"),
+      Buffer.from(tx.to_bytes()).toString("hex"),
       true
     );
     txVkeyWitnesses = TransactionWitnessSet.from_bytes(
@@ -750,11 +757,11 @@ export default class App extends React.Component {
 
     const signedTx = Transaction.new(tx.body(), transactionWitnessSet);
 
-    const submittedTxHash = await this.API.submitTx(
+    /*const submittedTxHash = await this.API.submitTx(
       Buffer.from(signedTx.to_bytes(), "utf8").toString("hex")
     );
     console.log(submittedTxHash);
-    this.setState({ submittedTxHash });
+    this.setState({ submittedTxHash });*/
   };
 
   buildSendAdaToPlutusScript = async () => {
@@ -1398,7 +1405,7 @@ export default class App extends React.Component {
                     onChange={(event) =>
                       this.setState({ assetPolicyIdHex: event.target.value })
                     }
-                    value={this.state.assetPolicyIdHex}
+                    value={this.state.assetPolicyIdHex || ""}
                   />
                 </FormGroup>
                 <FormGroup
@@ -1411,7 +1418,7 @@ export default class App extends React.Component {
                     onChange={(event) =>
                       this.setState({ assetNameHex: event.target.value })
                     }
-                    value={this.state.assetNameHex}
+                    value={this.state.assetNameHex || ""}
                   />
                 </FormGroup>
 
