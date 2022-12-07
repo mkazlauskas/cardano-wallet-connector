@@ -1221,10 +1221,10 @@
   resolved "https://registry.yarnpkg.com/@csstools/selector-specificity/-/selector-specificity-2.0.2.tgz#1bfafe4b7ed0f3e4105837e056e0a89b108ebe36"
   integrity sha512-IkpVW/ehM1hWKln4fCA3NzJU8KwD+kIOvPZA4cqxoJHtE21CCzjyp+Kxbu0i5I4tBNOlXPL9mjwnWlL0VEG4Fg==
 
-"@emurgo/cardano-serialization-lib-asmjs@^10.0.4-beta.4":
-  version "10.2.0"
-  resolved "https://registry.yarnpkg.com/@emurgo/cardano-serialization-lib-asmjs/-/cardano-serialization-lib-asmjs-10.2.0.tgz#460b7dee0a1e6e365a598c31d30cf8226684e76a"
-  integrity sha512-AHUGIQ4RBaaQiaz8+NeN7yEtu8PgKtIKp5j1cIivRFjyA0kKTxmDkrMuTBpMZqhADWrvUf6cnKw5Tzwqzg26MQ==
+"@emurgo/cardano-serialization-lib-asmjs@11.1.1":
+  version "11.1.1"
+  resolved "https://registry.yarnpkg.com/@emurgo/cardano-serialization-lib-asmjs/-/cardano-serialization-lib-asmjs-11.1.1.tgz#6669a8f1511f71eee9db47a4ea217ea40327d5cc"
+  integrity sha512-/3rueZlnOjGud8ipiHLj816iI4R/6tTp2RwIeOWPVkMaSROLFPNHvYFqaPSuppvIhKa2dB7pOATJjVLIIMD01Q==
 
 "@eslint/eslintrc@^1.3.3":
   version "1.3.3"
