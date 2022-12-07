@@ -128,8 +128,8 @@ export default class App extends React.Component {
      */
     this.protocolParams = {
       linearFee: {
-        minFeeA: "44",
-        minFeeB: "155381",
+        minFeeA: "440",
+        minFeeB: "175381",
       },
       minUtxo: "34482",
       poolDeposit: "500000000",
@@ -655,14 +655,12 @@ export default class App extends React.Component {
 
     // once the transaction is ready, we build it to get the tx body without witnesses
     const txBody = txBuilder.build();
+    txBody.set_validity_start_interval_bignum(BigNum.from_str("1"));
+    txBody.set_ttl(BigNum.from_str("999999999"));
     console.log("built tx");
     // Tx witness
-    const transactionWitnessSet = TransactionWitnessSet.new();
 
-    const tx = Transaction.new(
-      txBody,
-      TransactionWitnessSet.from_bytes(transactionWitnessSet.to_bytes())
-    );
+    const tx = Transaction.new(txBody, TransactionWitnessSet.new());
 
     const newTxVkeyWitnesses = await this.API.signTx(
       Buffer.from(tx.to_bytes(), "utf8").toString("hex"),
@@ -676,19 +674,20 @@ export default class App extends React.Component {
     );*/
 
     //transactionWitnessSet.set_vkeys(txVkeyWitnesses.vkeys());
+    if (newTxVkeyWitnesses) {
+      const signedWitnessSet = TransactionWitnessSet.from_bytes(
+        Buffer.from(newTxVkeyWitnesses, "hex")
+      );
 
-    const signedWitnessSet = TransactionWitnessSet.from_bytes(
-      Buffer.from(newTxVkeyWitnesses, "hex")
-    );
+      const signedTx = Transaction.new(tx.body(), signedWitnessSet);
 
-    const signedTx = Transaction.new(tx.body(), signedWitnessSet);
+      this.setState({ transactionWitnessSet: signedTx.witness_set().to_hex() });
 
-    this.setState({ transactionWitnessSet: signedTx.witness_set.toString() });
-
-    /*const txCbor = Buffer.from(signedTx.to_bytes()).toString("hex");
-    const submittedTxHash = await this.API.submitTx(txCbor);
-    console.log(submittedTxHash);
-    this.setState({ submittedTxHash });*/
+      const txCbor = Buffer.from(signedTx.to_bytes()).toString("hex");
+      const submittedTxHash = await this.API.submitTx(txCbor);
+      console.log(submittedTxHash);
+      this.setState({ submittedTxHash });
+    }
   };
 
   buildSendTokenTransaction = async () => {
