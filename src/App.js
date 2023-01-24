@@ -93,8 +93,8 @@ export default class App extends React.Component {
       addressBech32SendADA:
         "addr_test1qq6f92330t26g8827qlslaa6z668vrrrv9xht5p28lk8mx9eqwhlk7um88k2my9nqglxz4rkfej7neap2e7c7lle5cjsyzg9y3",
       lovelaceToSend: 3000000,
-      assetNameHex: undefined,
-      assetPolicyIdHex: undefined,
+      assetNameHex: "",
+      assetPolicyIdHex: "",
       assetAmountToSend: 5,
       addressScriptBech32:
         "addr_test1wpnlxv2xv9a9ucvnvzqakwepzl9ltx7jzgm53av2e9ncv4sysemm8",
@@ -471,6 +471,9 @@ export default class App extends React.Component {
   getChangeAddress = async () => {
     try {
       const raw = await this.API.getChangeAddress();
+      console.log("raw", raw);
+      const rawFirst = raw[0];
+      console.log("rawFirst", rawFirst);
       /*const changeAddress = Address.from_bytes(
         Buffer.from(raw, "hex")
       ).to_bech32();*/
@@ -486,14 +489,12 @@ export default class App extends React.Component {
    */
   getRewardAddresses = async () => {
     try {
-      const raw = await this.API.getRewardAddresses();
-      const rawFirst = raw[0];
-      console.log("ra", rawFirst);
+      const [raw] = await this.API.getRewardAddresses();
       /*const rewardAddress = Address.from_bytes(
-        Buffer.from(rawFirst, "hex")
+        Buffer.from(raw, "hex")
       ).to_bech32();*/
       // console.log(rewardAddress)
-      this.setState({ rewardAddress: rawFirst });
+      this.setState({ rewardAddress: raw });
     } catch (err) {
       console.log(err);
     }
@@ -505,11 +506,10 @@ export default class App extends React.Component {
    */
   getUsedAddresses = async () => {
     try {
-      const raw = await this.API.getUsedAddresses();
-      const rawFirst = raw[0];
+      const [raw] = await this.API.getUsedAddresses();
       // const usedAddress = new Address(rawFirst).from_bech32();
       // console.log(rewardAddress)
-      this.setState({ usedAddress: rawFirst });
+      this.setState({ usedAddress: raw });
     } catch (err) {
       console.log(err);
     }
@@ -579,9 +579,9 @@ export default class App extends React.Component {
    * Every transaction starts with initializing the
    * TransactionBuilder and setting the protocol parameters
    * This is boilerplate
-   * @returns {Promise<TransactionBuilder>}
+   * @returns TransactionBuilder
    */
-  initTransactionBuilder = async () => {
+  initTransactionBuilder = () => {
     const txBuilder = TransactionBuilder.new(
       TransactionBuilderConfigBuilder.new()
         .fee_algo(
@@ -667,13 +667,6 @@ export default class App extends React.Component {
       true
     );
 
-    // console.log(txVkeyWitnesses);
-
-    /*txVkeyWitnesses = TransactionWitnessSet.from_bytes(
-      Buffer.from(txVkeyWitnesses, "hex")
-    );*/
-
-    //transactionWitnessSet.set_vkeys(txVkeyWitnesses.vkeys());
     if (newTxVkeyWitnesses) {
       const signedWitnessSet = TransactionWitnessSet.from_bytes(
         Buffer.from(newTxVkeyWitnesses, "hex")
@@ -756,11 +749,11 @@ export default class App extends React.Component {
 
     const signedTx = Transaction.new(tx.body(), transactionWitnessSet);
 
-    /*const submittedTxHash = await this.API.submitTx(
+    const submittedTxHash = await this.API.submitTx(
       Buffer.from(signedTx.to_bytes(), "utf8").toString("hex")
     );
     console.log(submittedTxHash);
-    this.setState({ submittedTxHash });*/
+    this.setState({ submittedTxHash });
   };
 
   buildSendAdaToPlutusScript = async () => {
@@ -1404,12 +1397,15 @@ export default class App extends React.Component {
                     onChange={(event) =>
                       this.setState({ assetPolicyIdHex: event.target.value })
                     }
-                    value={this.state.assetPolicyIdHex || ""}
+                    value={this.state.assetPolicyIdHex}
                   />
                 </FormGroup>
                 <FormGroup
                   helperText="Hex of the Asset Name"
-                  label="Asset Name"
+                  label={`Asset Name: ${Buffer.from(
+                    this.state.assetNameHex,
+                    "hex"
+                  ).toString()}`}
                 >
                   <InputGroup
                     disabled={false}
