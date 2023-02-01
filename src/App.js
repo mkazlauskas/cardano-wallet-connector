@@ -627,7 +627,7 @@ export default class App extends React.Component {
    * 6 - Send the transaction
    * @returns {Promise<void>}
    */
-  buildSendADATransaction = async () => {
+  buildSendADATransaction = async (submitTxAfter = false) => {
     const txBuilder = await this.initTransactionBuilder();
     const shelleyOutputAddress = this.state.addressBech32SendADA;
     const shelleyChangeAddress = this.state.changeAddress;
@@ -655,7 +655,9 @@ export default class App extends React.Component {
 
     // once the transaction is ready, we build it to get the tx body without witnesses
     const txBody = txBuilder.build();
-    txBody.set_validity_start_interval_bignum(BigNum.from_str("1"));
+    // txBody.set_validity_start_interval_bignum(new BigNum(1));
+    // txBody.validity_start_interval(1);
+    txBody.set_validity_start_interval(1);
     txBody.set_ttl(BigNum.from_str("999999999"));
     console.log("built tx");
     // Tx witness
@@ -677,6 +679,9 @@ export default class App extends React.Component {
       this.setState({ transactionWitnessSet: signedTx.witness_set().to_hex() });
 
       const txCbor = Buffer.from(signedTx.to_bytes()).toString("hex");
+      console.log("cbor start");
+      console.log(txCbor);
+      console.log("cbor end");
       const submittedTxHash = await this.API.submitTx(txCbor);
       console.log(submittedTxHash);
       this.setState({ submittedTxHash });
@@ -703,6 +708,11 @@ export default class App extends React.Component {
     multiAsset.insert(
       ScriptHash.from_bytes(Buffer.from(this.state.assetPolicyIdHex, "hex")), // PolicyID
       assets
+    );
+
+    console.log(
+      "this.protocolParams.coinsPerUtxoWord",
+      this.protocolParams.coinsPerUtxoWord
     );
 
     txOutputBuilder = txOutputBuilder.with_asset_and_min_required_coin(
@@ -1892,7 +1902,16 @@ export default class App extends React.Component {
         {this.state.transactionWitnessSet && (
           <p>{`TX witness key set ${this.state.transactionWitnessSet}`}</p>
         )}
-        <p>{`Submitted Tx Hash: ${this.state.submittedTxHash}`}</p>
+        {this.state.submittedTxHash && (
+          <p>
+            Submitted Tx Hash:{" "}
+            <a
+              href={`https://preprod.cexplorer.io/tx/${this.state.submittedTxHash}`}
+            >
+              ${this.state.submittedTxHash}
+            </a>
+          </p>
+        )}
         <p>{this.state.submittedTxHash ? "check your wallet !" : ""}</p>
       </div>
     );
