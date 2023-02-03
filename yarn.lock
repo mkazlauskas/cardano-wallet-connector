@@ -3368,6 +3368,11 @@ crypto-random-string@^2.0.0:
   resolved "https://registry.yarnpkg.com/crypto-random-string/-/crypto-random-string-2.0.0.tgz#ef2a7a966ec11083388369baa02ebead229b30d5"
   integrity sha512-v1plID3y9r/lPhviJ1wrXpLeyUIGAZ2SHNYTEapm7/8A9nLPoyvVp3RK/EPFqn5kEznyWgYZNsRtYYIWbuG8KA==
 
+csl-runtime-gc@^1.0.4:
+  version "1.0.4"
+  resolved "https://registry.yarnpkg.com/csl-runtime-gc/-/csl-runtime-gc-1.0.4.tgz#756c628cfb4f333369b6b7e7b3a9ae4331250887"
+  integrity sha512-GhYvkhTaVCtRoaX7yE2QnzEkEjDqY47LmcF+x7uph+z2XyIh/cErb8bxIwpStp2ZrNntwqtWTYBVAXCpF1++Lw==
+
 css-blank-pseudo@^3.0.3:
   version "3.0.3"
   resolved "https://registry.yarnpkg.com/css-blank-pseudo/-/css-blank-pseudo-3.0.3.tgz#36523b01c12a25d812df343a32c322d2a2324561"

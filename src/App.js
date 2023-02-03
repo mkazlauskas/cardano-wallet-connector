@@ -11,7 +11,8 @@ import {
 import "../node_modules/@blueprintjs/core/lib/css/blueprint.css";
 import "../node_modules/@blueprintjs/icons/lib/css/blueprint-icons.css";
 import "../node_modules/normalize.css/normalize.css";
-import {
+
+/*import {
   Address,
   BaseAddress,
   MultiAsset,
@@ -58,8 +59,11 @@ import {
   NativeScript,
   StakeCredential,
   Vkeywitnesses,
-} from "@emurgo/cardano-serialization-lib-asmjs";
+} from "@emurgo/cardano-serialization-lib-asmjs";*/
+
 import "./App.css";
+const csl = require("@emurgo/cardano-serialization-lib-asmjs");
+const wrappedCsl = require("csl-runtime-gc")(csl);
 let Buffer = require("buffer/").Buffer;
 let blake = require("blakejs");
 
@@ -202,23 +206,25 @@ export default class App extends React.Component {
   /**
    * Generate address from the plutus contract cborhex
    */
-  generateScriptAddress = () => {
+  /*generateScriptAddress = () => {
     // cborhex of the alwayssucceeds.plutus
     // const cborhex = "4e4d01000033222220051200120011";
     // const cbor = Buffer.from(cborhex, "hex");
     // const blake2bhash = blake.blake2b(cbor, 0, 28);
 
-    const script = PlutusScript.from_bytes(
+    const script = wrappedCsl.PlutusScript.from_bytes(
       Buffer.from(this.state.plutusScriptCborHex, "hex")
     );
     // const blake2bhash = blake.blake2b(script.to_bytes(), 0, 28);
     const blake2bhash =
       "67f33146617a5e61936081db3b2117cbf59bd2123748f58ac9678656";
-    const scripthash = ScriptHash.from_bytes(Buffer.from(blake2bhash, "hex"));
+    const scripthash = wrappedCsl.ScriptHash.from_bytes(
+      Buffer.from(blake2bhash, "hex")
+    );
 
-    const cred = StakeCredential.from_scripthash(scripthash);
-    const networkId = NetworkInfo.testnet().network_id();
-    const baseAddr = EnterpriseAddress.new(networkId, cred);
+    const cred = wrappedCsl.StakeCredential.from_scripthash(scripthash);
+    const networkId = wrappedCsl.NetworkInfo.testnet().network_id();
+    const baseAddr = wrappedCsl.EnterpriseAddress.new(networkId, cred);
     const addr = baseAddr.to_address();
     const addrBech32 = addr.to_bech32();
 
@@ -226,14 +232,16 @@ export default class App extends React.Component {
     console.log(Buffer.from(addr.to_bytes(), "utf8").toString("hex"));
 
     // hash of the address generated using cardano-cli
-    const ScriptAddress = Address.from_bech32(
+    const ScriptAddress = wrappedCsl.Address.from_bech32(
       "addr_test1wpnlxv2xv9a9ucvnvzqakwepzl9ltx7jzgm53av2e9ncv4sysemm8"
     );
-    console.log(Buffer.from(ScriptAddress.to_bytes(), "utf8").toString("hex"));
+    console.log(
+      Buffer.from(wrappedCsl.ScriptAddress.to_bytes(), "utf8").toString("hex")
+    );
 
-    console.log(ScriptAddress.to_bech32());
+    console.log(wrappedCsl.ScriptAddress.to_bech32());
     console.log(addrBech32);
-  };
+  };*/
 
   /**
    * Checks if the wallet is running in the browser
@@ -339,7 +347,7 @@ export default class App extends React.Component {
       const rawUtxos = await this.API.getUtxos();
 
       for (const rawUtxo of rawUtxos) {
-        const utxo = TransactionUnspentOutput.from_bytes(
+        const utxo = wrappedCsl.TransactionUnspentOutput.from_bytes(
           Buffer.from(rawUtxo, "hex")
         );
         const input = utxo.input();
@@ -434,7 +442,9 @@ export default class App extends React.Component {
       }
 
       for (const x of collateral) {
-        const utxo = TransactionUnspentOutput.from_bytes(Buffer.from(x, "hex"));
+        const utxo = wrappedCsl.TransactionUnspentOutput.from_bytes(
+          Buffer.from(x, "hex")
+        );
         CollatUtxos.push(utxo);
         // console.log(utxo)
       }
@@ -454,7 +464,9 @@ export default class App extends React.Component {
     try {
       const balanceCBORHex = await this.API.getBalance();
 
-      const balance = Value.from_bytes(Buffer.from(balanceCBORHex, "hex"))
+      const balance = wrappedCsl.Value.from_bytes(
+        Buffer.from(balanceCBORHex, "hex")
+      )
         .coin()
         .to_str();
       this.setState({ balance });
@@ -520,7 +532,7 @@ export default class App extends React.Component {
    * @returns {Promise<void>}
    */
   refreshData = async () => {
-    this.generateScriptAddress();
+    //this.generateScriptAddress();
 
     try {
       const walletFound = this.checkIfWalletFound();
@@ -582,18 +594,20 @@ export default class App extends React.Component {
    * @returns TransactionBuilder
    */
   initTransactionBuilder = () => {
-    const txBuilder = TransactionBuilder.new(
-      TransactionBuilderConfigBuilder.new()
+    const txBuilder = wrappedCsl.TransactionBuilder.new(
+      wrappedCsl.TransactionBuilderConfigBuilder.new()
         .fee_algo(
-          LinearFee.new(
-            BigNum.from_str(this.protocolParams.linearFee.minFeeA),
-            BigNum.from_str(this.protocolParams.linearFee.minFeeB)
+          wrappedCsl.LinearFee.new(
+            wrappedCsl.BigNum.from_str(this.protocolParams.linearFee.minFeeA),
+            wrappedCsl.BigNum.from_str(this.protocolParams.linearFee.minFeeB)
           )
         )
-        .pool_deposit(BigNum.from_str(this.protocolParams.poolDeposit))
-        .key_deposit(BigNum.from_str(this.protocolParams.keyDeposit))
+        .pool_deposit(
+          wrappedCsl.BigNum.from_str(this.protocolParams.poolDeposit)
+        )
+        .key_deposit(wrappedCsl.BigNum.from_str(this.protocolParams.keyDeposit))
         .coins_per_utxo_byte(
-          BigNum.from_str(this.protocolParams.coinsPerUtxoByte)
+          wrappedCsl.BigNum.from_str(this.protocolParams.coinsPerUtxoByte)
         )
         .max_value_size(this.protocolParams.maxValSize)
         .max_tx_size(this.protocolParams.maxTxSize)
@@ -609,7 +623,7 @@ export default class App extends React.Component {
    * @returns {Promise<TransactionUnspentOutputs>}
    */
   getTxUnspentOutputs = async () => {
-    let txOutputs = TransactionUnspentOutputs.new();
+    let txOutputs = wrappedCsl.TransactionUnspentOutputs.new();
     for (const utxo of this.state.Utxos) {
       txOutputs.add(utxo.TransactionUnspentOutput);
     }
@@ -635,22 +649,27 @@ export default class App extends React.Component {
     console.log("shelleyOutputAddress", shelleyOutputAddress);
     console.log("shelleyChangeAddress", shelleyChangeAddress);
 
-    txBuilder.add_output(
-      TransactionOutput.new(
-        Address.from_bech32(shelleyOutputAddress),
-        Value.new(BigNum.from_str(this.state.lovelaceToSend.toString()))
+    const txOutput = wrappedCsl.TransactionOutput.new(
+      wrappedCsl.Address.from_bech32(shelleyOutputAddress),
+      wrappedCsl.Value.new(
+        wrappedCsl.BigNum.from_str(this.state.lovelaceToSend.toString())
       )
     );
+    txBuilder.add_output(txOutput);
+    txOutput.free();
     console.log("added output");
 
     // Find the available UTXOs in the wallet and
     // us them as Inputs
     const txUnspentOutputs = await this.getTxUnspentOutputs();
+    console.log("got txUnspentOutputs", txUnspentOutputs);
     txBuilder.add_inputs_from(txUnspentOutputs, 1);
     console.log("added inputs");
 
     // calculate the min fee required and send any change to an address
-    txBuilder.add_change_if_needed(Address.from_bech32(shelleyChangeAddress));
+    txBuilder.add_change_if_needed(
+      wrappedCsl.Address.from_bech32(shelleyChangeAddress)
+    );
     console.log("added change");
 
     // once the transaction is ready, we build it to get the tx body without witnesses
@@ -658,23 +677,30 @@ export default class App extends React.Component {
     // txBody.set_validity_start_interval_bignum(new BigNum(1));
     // txBody.validity_start_interval(1);
     txBody.set_validity_start_interval(1);
-    txBody.set_ttl(BigNum.from_str("999999999"));
+    txBody.set_ttl(wrappedCsl.BigNum.from_str("999999999"));
     console.log("built tx");
     // Tx witness
 
-    const tx = Transaction.new(txBody, TransactionWitnessSet.new());
+    const tx = wrappedCsl.Transaction.new(
+      txBody,
+      wrappedCsl.TransactionWitnessSet.new()
+    );
 
     const newTxVkeyWitnesses = await this.API.signTx(
       Buffer.from(tx.to_bytes(), "utf8").toString("hex"),
       true
     );
 
+    console.log("got witnesses", newTxVkeyWitnesses);
+
     if (newTxVkeyWitnesses) {
-      const signedWitnessSet = TransactionWitnessSet.from_bytes(
+      const signedWitnessSet = wrappedCsl.TransactionWitnessSet.from_bytes(
         Buffer.from(newTxVkeyWitnesses, "hex")
       );
+      console.log(signedWitnessSet.vkeys().len());
 
-      const signedTx = Transaction.new(tx.body(), signedWitnessSet);
+      const signedTx = wrappedCsl.Transaction.new(tx.body(), signedWitnessSet);
+      // console.log(signedTx.vkeys().len());
 
       this.setState({ transactionWitnessSet: signedTx.witness_set().to_hex() });
 
@@ -688,7 +714,7 @@ export default class App extends React.Component {
     }
   };
 
-  buildSendTokenTransaction = async () => {
+  /*buildSendTokenTransaction = async () => {
     const txBuilder = await this.initTransactionBuilder();
     const shelleyOutputAddress = this.state.addressBech32SendADA;
     const shelleyChangeAddress = this.state.changeAddress;
@@ -1003,7 +1029,7 @@ export default class App extends React.Component {
         Otherwise it will give errors when redeeming from Scripts
         Sending assets and ada to Script addresses is unaffected by this cost model
          */
-    const cost_model_vals = [
+  /*const cost_model_vals = [
       205665, 812, 1, 1, 1000, 571, 0, 1, 1000, 24177, 4, 1, 1000, 32, 117366,
       10475, 4, 23000, 100, 23000, 100, 23000, 100, 23000, 100, 23000, 100,
       23000, 100, 100, 100, 23000, 100, 19537, 32, 175354, 32, 46417, 4, 221973,
@@ -1158,7 +1184,7 @@ export default class App extends React.Component {
         Otherwise it will give errors when redeeming from Scripts
         Sending assets and ada to Script addresses is unaffected by this cost model
          */
-    const cost_model_vals = [
+  /*const cost_model_vals = [
       205665, 812, 1, 1, 1000, 571, 0, 1, 1000, 24177, 4, 1, 1000, 32, 117366,
       10475, 4, 23000, 100, 23000, 100, 23000, 100, 23000, 100, 23000, 100,
       23000, 100, 100, 100, 23000, 100, 19537, 32, 175354, 32, 46417, 4, 221973,
@@ -1213,7 +1239,7 @@ export default class App extends React.Component {
     );
     console.log(submittedTxHash);
     this.setState({ submittedTxHash });
-  };
+  };*/
 
   async componentDidMount() {
     this.pollWallets();
@@ -1351,7 +1377,7 @@ export default class App extends React.Component {
 
                 <button
                   style={{ padding: "10px" }}
-                  onClick={this.buildSendADATransaction}
+                  onClick={async () => await this.buildSendADATransaction()}
                 >
                   Run
                 </button>
