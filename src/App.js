@@ -656,7 +656,6 @@ export default class App extends React.Component {
       )
     );
     txBuilder.add_output(txOutput);
-    txOutput.free();
     console.log("added output");
 
     // Find the available UTXOs in the wallet and
@@ -676,7 +675,7 @@ export default class App extends React.Component {
     const txBody = txBuilder.build();
     // txBody.set_validity_start_interval_bignum(new BigNum(1));
     // txBody.validity_start_interval(1);
-    txBody.set_validity_start_interval(1);
+    // txBody.set_validity_start_interval(1);
     txBody.set_ttl(wrappedCsl.BigNum.from_str("999999999"));
     console.log("built tx");
     // Tx witness
@@ -686,8 +685,14 @@ export default class App extends React.Component {
       wrappedCsl.TransactionWitnessSet.new()
     );
 
+    const txHex = Buffer.from(tx.to_bytes()).toString("hex");
+    console.log('txHex', txHex)
+
+    const txId = Buffer.from(wrappedCsl.hash_transaction(tx.body()).to_bytes()).toString('hex');
+    console.log('signTxId', txId);
+
     const newTxVkeyWitnesses = await this.API.signTx(
-      Buffer.from(tx.to_bytes(), "utf8").toString("hex"),
+      txHex,
       true
     );
 
@@ -700,7 +705,6 @@ export default class App extends React.Component {
       console.log(signedWitnessSet.vkeys().len());
 
       const signedTx = wrappedCsl.Transaction.new(tx.body(), signedWitnessSet);
-      // console.log(signedTx.vkeys().len());
 
       this.setState({ transactionWitnessSet: signedTx.witness_set().to_hex() });
 
